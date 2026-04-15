@@ -15,6 +15,7 @@ const (
 	AlertSinkSlack      AlertSink = "slack"
 	AlertSinkTeams      AlertSink = "teams"
 	AlertSinkGoogleChat AlertSink = "gchat"
+	AlertSinkWebex      AlertSink = "webex"
 	AlertSinkRaw        AlertSink = "raw"
 )
 
@@ -47,6 +48,8 @@ func SendWebhookAlert(msg string) {
 		sendTeamsAlert(webhook_url, webhook_proxy, msg)
 	case AlertSinkGoogleChat:
 		sendGoogleChatAlert(webhook_url, webhook_proxy, msg)
+	case AlertSinkWebex:
+		sendWebexAlert(webhook_url, webhook_proxy, msg)
 	default:
 		msg = strings.ReplaceAll(msg, "*", "")
 		sendRawWebhookAlert(webhook_url, webhook_proxy, msg)
@@ -128,6 +131,29 @@ func sendGoogleChatAlert(webhookUrl string, proxy string, msg string) []error {
 	}
 	if resp.StatusCode != 200 {
 		return []error{fmt.Errorf("error sending msg. status: %v", resp.Status)}
+	}
+
+	return nil
+}
+
+// function to send alert to Webex webhook
+func sendWebexAlert(webhookUrl string, proxy string, msg string) []error {
+	payload := map[string]interface{}{
+		"text": msg,  // oder markdown:msg, je nach Webhook‑Typ
+	}
+
+	request := gorequest.New().Proxy(proxy)
+	resp, _, err := request.
+		Post(webhookUrl).
+		RedirectPolicy(redirectPolicy).
+		Send(payload).
+		End()
+
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode >= 400 {
+		return []error{fmt.Errorf("error sending msg to Webex webhook. status: %v", resp.Status)}
 	}
 
 	return nil
